@@ -3,6 +3,8 @@ from __future__ import annotations
 import rclpy
 import canopen
 import yaml
+import os
+from ament_index_python import get_package_share_directory
 from rclpy.node import Node
 from rclpy.logging import get_logger
 from rclpy.executors import MultiThreadedExecutor
@@ -11,8 +13,7 @@ from .canopen_network_canopen_master_node import CanopenMasterNode
 
 def setup() -> list[Node]:
     
-    config_file_param = rclpy.Parameter(name = 'config_file', value = '/home/srl-orin/ros2_ws/src/tbotros_config/config/can.yaml')
-    config_file = config_file_param.get_parameter_value().string_value
+    config_file = os.path.join(get_package_share_directory('tbotros_config'), 'config/can.yaml')
 
     # load config
     with open(config_file, 'r') as stream:
