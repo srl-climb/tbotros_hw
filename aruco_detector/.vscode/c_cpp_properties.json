@@ -1,0 +1,39 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/srl-orin/ros2_base/install/zed_components/include/**",
+        "/home/srl-orin/ros2_base/install/zed_interfaces/include/**",
+        "/home/srl-orin/ros2_base/install/stereo_image_proc/include/**",
+        "/home/srl-orin/ros2_base/install/image_proc/include/**",
+        "/home/srl-orin/ros2_base/install/tracetools_image_pipeline/include/**",
+        "/home/srl-orin/ros2_base/install/pylon_ros2_camera_component/include/**",
+        "/home/srl-orin/ros2_base/install/pylon_ros2_camera_interfaces/include/**",
+        "/home/srl-orin/ros2_base/install/image_view/include/**",
+        "/home/srl-orin/ros2_base/install/image_rotate/include/**",
+        "/home/srl-orin/ros2_base/install/image_publisher/include/**",
+        "/home/srl-orin/ros2_base/install/depth_image_proc/include/**",
+        "/home/srl-orin/ros2_base/install/image_geometry/include/**",
+        "/home/srl-orin/ros2_base/install/cv_bridge/include/**",
+        "/home/srl-orin/ros2_ws/install/custom_srvs/include/**",
+        "/home/srl-orin/ros2_ws/install/custom_msgs/include/**",
+        "/home/srl-orin/ros2_ws/install/custom_actions/include/**",
+        "/opt/ros/foxy/include/**",
+        "/home/srl-orin/ros2_ws/src/tbotros_interfaces/custom_actions/include/**",
+        "/home/srl-orin/ros2_ws/src/tbotros_interfaces/custom_msgs/include/**",
+        "/home/srl-orin/ros2_ws/src/tbotros_interfaces/custom_srvs/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-arm64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
