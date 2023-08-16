@@ -38,15 +38,13 @@ def setup() -> list[Node]:
                                      namespace = node_config['namespace'], 
                                      name = node_config['name'], 
                                      params = node_config['params'])
-        elif node_config['type'] == 'faulhaber_motor':
+            nodes.append(node)
+        elif node_config['type'] == 'faulhaber_motor': #and node_config['namespace'] =='motor10':
             node = FaulhaberMotorNode(network = network, 
                                       namespace = node_config['namespace'], 
                                       name = node_config['name'], 
                                       params = node_config['params'])
-        else:
-            node = None
-
-        nodes.append(node)
+            nodes.append(node)
 
     return nodes
 

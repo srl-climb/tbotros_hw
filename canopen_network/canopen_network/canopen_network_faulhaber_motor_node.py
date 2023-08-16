@@ -167,6 +167,19 @@ class FaulhaberMotorNode(BaseNode):
      
         self.get_logger().info('Initialization completed')
 
+        # debug loop
+        #self.create_timer(1, self.debug_loop)
+
+    def debug_loop(self):
+        self.get_logger().info('target position: ' + str(self._node.sdo[0x607A].raw))
+        self.get_logger().info('target position interntal: ' + str(self._node.sdo[0x257A].raw))
+        self.get_logger().info('actual position: ' + str(self._node.sdo[0x6064].raw))
+        self.get_logger().info('actual position internal: ' + str(self._node.sdo[0x6063].raw))
+        self.get_logger().info('min limit position: ' + str(self._node.sdo[0x607D][0x1].raw))
+        self.get_logger().info('min limit position internal: ' + str(self._node.sdo[0x257D][0x1].raw))
+        self.get_logger().info('max limit position: ' + str(self._node.sdo[0x607D][0x2].raw))
+        self.get_logger().info('max limit position internal: ' + str(self._node.sdo[0x257D][0x2].raw))
+
     def load_configs(self):
 
         for config_file in self._config_files:
@@ -279,6 +292,7 @@ class FaulhaberMotorNode(BaseNode):
 
         self._pub_inputs.publish(msg)
 
+
     def position_tpdo_callback(self, canmsg:Map):
 
         # position
@@ -381,7 +395,7 @@ class FaulhaberMotorNode(BaseNode):
         
         try:
             if self._state == 'operation enabled':
-                self._node.sdo[0x6040].raw =  0x0007
+                self._node.sdo[0x6040].raw = 0x0007
             else:
                 raise StateChangeError()
         except Exception as exc:
@@ -438,6 +452,8 @@ class FaulhaberMotorNode(BaseNode):
                 self._node.sdo[0x6060].raw = 1
                 self._node.sdo[0x6040].bits[6] = goal_handle.request.absolute_relative
                 self._node.sdo[0x607A].raw = goal_handle.request.target_position * self._factor
+                self.get_logger().error(str(self._node.sdo[0x6040].bits[6] ))
+                self.get_logger().error(str(self._node.sdo[0x607A].raw))
             # homing move parameters
             elif goal_handle.request.mode == 1: 
                 self._node.sdo[0x607C].raw = self._homing_offset * self._factor
@@ -449,9 +465,9 @@ class FaulhaberMotorNode(BaseNode):
                 self._node.sdo[0x607A].raw = self._node.sdo[0x6064].raw # set target position to actual position
             # homing move with initial position parameters
             elif goal_handle.request.mode == 3:
+                self._node.sdo[0x6060].raw = 6
                 self._node.sdo[0x607C].raw = self._initial_position * self._factor
                 self._node.sdo[0x6098].raw = 35
-                self._node.sdo[0x6060].raw = 6
             # general parameters
             self._node.sdo[0x6081].raw = goal_handle.request.profile_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
             self._node.sdo[0x6083].raw = goal_handle.request.profile_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
@@ -467,7 +483,7 @@ class FaulhaberMotorNode(BaseNode):
 
             # publish feedback
             feedback = MoveMotor.Feedback()
-            rate     = self.create_rate(2, self.get_clock())
+            rate     = self.create_rate(4, self.get_clock())
             aborted  = False
             canceled = False
             done     = False
