@@ -185,7 +185,7 @@ class FaulhaberMotorNode(BaseNode):
         for config_file in self._config_files:
             try:
                 with open(config_file, "r") as stream:        
-                    data: dict = yaml.safe_load(stream)                 
+                    data: dict = yaml.safe_load(stream) or {}                
                     self._config.update(data)                 
             except Exception as exc:
                 self.get_logger().error('Failed loading config file: ' + str(exc))
@@ -194,7 +194,7 @@ class FaulhaberMotorNode(BaseNode):
 
         try:
             with open(self._pos_file, "r") as stream:
-                self._pos: dict = yaml.safe_load(stream)
+                self._pos: dict = yaml.safe_load(stream) or {}
         except Exception as exc:
             self.get_logger().error('Failed loading position file: ' + str(exc))
 
@@ -561,7 +561,7 @@ class FaulhaberMotorNode(BaseNode):
 
         try:
             with open(self._pos_file, "r") as stream:
-                data = yaml.safe_load(stream)
+                data = yaml.safe_load(stream) or {}
             with open(self._pos_file, "w") as stream:
                 data['position'] = position
                 yaml.safe_dump(data, stream)
