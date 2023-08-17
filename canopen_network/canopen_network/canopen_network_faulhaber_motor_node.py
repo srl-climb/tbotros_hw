@@ -46,6 +46,7 @@ class FaulhaberMotorNode(BaseNode):
         self.create_service(Trigger, name + 'disable_operation', self.disable_operation_callback)
         self.create_service(Trigger, name + 'enable_operation', self.enable_operation_callback)
         self.create_service(Trigger, name + 'fault_reset', self.fault_reset_callback)
+        self.create_service(Trigger, name + 'save_home', self.save_home_callback)
 
         # create action for moving the motor
         ActionServer(self, MoveMotor, name + 'move', 
@@ -439,7 +440,34 @@ class FaulhaberMotorNode(BaseNode):
             response.success = True
 
         return response
-    
+
+    def save_home_callback(self, request: Trigger.Request, response: Trigger.Response) -> Trigger.Response:
+
+        response = Trigger.Response()
+
+        try:
+            position = self._node.sdo[0x6064].raw / self._factor
+        except Exception as exc:
+            self.get_logger().error(str(exc))
+            response.success = False
+            response.message = str(exc)
+            return response
+
+        try:
+            with open(self._pos_file, "w") as stream:
+                data = {'position': position}
+                yaml.safe_dump(data, stream)
+        except Exception as exc:
+            self.get_logger().error('Failed saving position file: ' + str(exc))
+            response.success = False
+            response.message = str(exc)
+            return response
+
+        self._initial_position = position
+        response.success = True
+
+        return response
+
     def execute_move_callback(self, goal_handle: ServerGoalHandle):
         
         move_id = self.get_move_id()
@@ -550,22 +578,3 @@ class FaulhaberMotorNode(BaseNode):
         self._pub_canerror.publish(msg)
 
         self.get_logger().error('CAN error: ' + msg.description)
-
-    def destroy_node(self) -> bool:
-        
-        try:
-            position = self._node.sdo[0x6064].raw / self._factor
-        except Exception as exc:
-            self.get_logger().error(str(exc))
-            position = 0
-
-        try:
-            with open(self._pos_file, "r") as stream:
-                data = yaml.safe_load(stream) or {}
-            with open(self._pos_file, "w") as stream:
-                data['position'] = position
-                yaml.safe_dump(data, stream)
-        except Exception as exc:
-            self.get_logger().error('Failed saving position file: ' + str(exc))
-
-        return super().destroy_node()
