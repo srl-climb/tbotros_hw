@@ -37,6 +37,7 @@ class FaulhaberMotorNode(BaseNode):
         self._pub_velocity = self.create_publisher(Float64, name + 'velocity', 1)
         self._pub_current = self.create_publisher(Int16, name + 'current', 1)
         self._pub_canerror = self.create_publisher(CanError, name + 'can_error', 1)
+        self.create_subscription(MotorPosition, name + 'target_position', self.target_position_callback, 100)
 
         # create services for controlling the motor's state machine
         self.create_service(Trigger, name + 'shut_down', self.shut_down_callback)
@@ -165,6 +166,9 @@ class FaulhaberMotorNode(BaseNode):
 
         # variable used by execute_move_callback to determine if a new move was started
         self._current_move_id = int(-1)
+
+        # variable to enable/disable target position subscription
+        self._target_position_sub_enabled = False
      
         self.get_logger().info('Initialization completed')
 
@@ -480,8 +484,9 @@ class FaulhaberMotorNode(BaseNode):
                 self._node.sdo[0x6060].raw = 1
                 self._node.sdo[0x6040].bits[6] = goal_handle.request.absolute_relative
                 self._node.sdo[0x607A].raw = goal_handle.request.target_position * self._factor
-                self.get_logger().error(str(self._node.sdo[0x6040].bits[6] ))
-                self.get_logger().error(str(self._node.sdo[0x607A].raw))
+                self._node.sdo[0x6081].raw = goal_handle.request.profile_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
+                self._node.sdo[0x6083].raw = goal_handle.request.profile_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
+                self._node.sdo[0x6084].raw = goal_handle.request.profile_deceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
             # homing move parameters
             elif goal_handle.request.mode == 1: 
                 self._node.sdo[0x607C].raw = self._homing_offset * self._factor
@@ -490,20 +495,19 @@ class FaulhaberMotorNode(BaseNode):
             # continuous positioning parameters
             elif goal_handle.request.mode == 2:
                 self._node.sdo[0x6060].raw = 8
-                self._node.sdo[0x607A].raw = self._node.sdo[0x6064].raw # set target position to actual position
+                self._node.sdo[0x607A].raw = 5000 # set target position to actual position
+                self._node.sdo[0x6081].raw = 5000 # set profile velocity with max permitted velocity
+                self._node.sdo[0x6083].raw = 5000 # set profile acceleration with quick stop deceleration
+                self._node.sdo[0x6084].raw = 30000 # set profile deceleration with quick stop deceleration
             # homing move with initial position parameters
             elif goal_handle.request.mode == 3:
                 self._node.sdo[0x6060].raw = 6
                 self._node.sdo[0x607C].raw = self._initial_position * self._factor
                 self._node.sdo[0x6098].raw = 35
-            # general parameters
-            self._node.sdo[0x6081].raw = goal_handle.request.profile_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
-            self._node.sdo[0x6083].raw = goal_handle.request.profile_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
-            self._node.sdo[0x6084].raw = goal_handle.request.profile_deceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
             
             # subscriber for receiving position commands
             if goal_handle.request.mode == 2:
-                target_position_sub = self.create_subscription(MotorPosition, goal_handle.request.target_position_topic, self.target_position_callback, 100)
+                self._target_position_sub_enabled = True
 
             # start move
             self._node.sdo[0x6040].bits[4] = 0 # start
@@ -526,7 +530,7 @@ class FaulhaberMotorNode(BaseNode):
                 done     = self._statusword.target_reached  # move reached target
 
             if goal_handle.request.mode == 2:
-                self.destroy_subscription(target_position_sub)
+                self._target_position_sub_enabled = False
 
             if canceled:
                 goal_handle.canceled()
@@ -553,13 +557,10 @@ class FaulhaberMotorNode(BaseNode):
         return GoalResponse.ACCEPT
 
     def target_position_callback(self, msg: MotorPosition): 
-
-        self._node.rpdo[2][0].raw = msg.target_position * self._factor
-        self._node.rpdo[2].transmit()
-
-        if msg.id != 0 and msg.id-self._last_message_id > 1:
-            self.get_logger().warn('Messages missing while receiving target positions')
-        self._last_message_id = msg.id     
+        
+        if self._target_position_sub_enabled:
+            self._node.rpdo[2][0].raw = msg.target_position * self._factor
+            self._node.rpdo[2].transmit()
 
     def get_move_id(self) -> int:
         
