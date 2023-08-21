@@ -14,6 +14,7 @@ from threading import Lock
 from ament_index_python import get_package_prefix
 from .canopen_network_base_node import BaseNode
 
+
 class StateChangeError(Exception):
     """Exception raised when motor controller can not perform the state change."""
     def __init__(self):
@@ -108,6 +109,9 @@ class FaulhaberMotorNode(BaseNode):
         self._initial_position = self._pos.get('position', 0)
         self._homing_offset = self._config.get('homing_offset', 0)
         self._homing_method = self._config.get('homing_method', 0)
+        self._csp_velocity = self._config.get('csp_velocity', 0)
+        self._csp_acceleration = self._config.get('csp_acceleration', 0)
+        self._csp_deceleration = self._config.get('csp_deceleration', 0)
         self._factor = self._config.get('factor', 1) # conversion from ros units -> motor controllers' user defined units -> ros units * factor = motor units
         self._gearratio = float(self._node.sdo[0x6091][0x01].raw) / float(self._node.sdo[0x6091][0x02].raw)
         self._feed = float(self._node.sdo[0x6092][0x01].raw) / float(self._node.sdo[0x6092][0x02].raw)
@@ -169,7 +173,7 @@ class FaulhaberMotorNode(BaseNode):
 
         # variable to enable/disable target position subscription
         self._target_position_sub_enabled = False
-     
+        
         self.get_logger().info('Initialization completed')
 
         # debug loop
@@ -483,22 +487,22 @@ class FaulhaberMotorNode(BaseNode):
             if goal_handle.request.mode == 0: 
                 self._node.sdo[0x6060].raw = 1
                 self._node.sdo[0x6040].bits[6] = goal_handle.request.absolute_relative
-                self._node.sdo[0x607A].raw = goal_handle.request.target_position * self._factor
+                self._node.sdo[0x607A].raw = goal_handle.request.target_position * self._factor # 0x607A in in user units (-> the controller internally factors in gear ratio and feed)
                 self._node.sdo[0x6081].raw = goal_handle.request.profile_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
-                self._node.sdo[0x6083].raw = goal_handle.request.profile_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
-                self._node.sdo[0x6084].raw = goal_handle.request.profile_deceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s
+                self._node.sdo[0x6083].raw = goal_handle.request.profile_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
+                self._node.sdo[0x6084].raw = goal_handle.request.profile_deceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
             # homing move parameters
             elif goal_handle.request.mode == 1: 
                 self._node.sdo[0x607C].raw = self._homing_offset * self._factor
                 self._node.sdo[0x6098].raw = self._homing_method
                 self._node.sdo[0x6060].raw = 6
-            # continuous positioning parameters
+            # cyclic synchronous positioning parameters
             elif goal_handle.request.mode == 2:
                 self._node.sdo[0x6060].raw = 8
-                self._node.sdo[0x607A].raw = 5000 # set target position to actual position
-                self._node.sdo[0x6081].raw = 5000 # set profile velocity with max permitted velocity
-                self._node.sdo[0x6083].raw = 5000 # set profile acceleration with quick stop deceleration
-                self._node.sdo[0x6084].raw = 30000 # set profile deceleration with quick stop deceleration
+                self._node.sdo[0x607A].raw = self._node.sdo[0x6064].raw # set target position to actual position
+                self._node.sdo[0x6081].raw = self._csp_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
+                self._node.sdo[0x6083].raw = self._csp_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
+                self._node.sdo[0x6084].raw = self._csp_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
             # homing move with initial position parameters
             elif goal_handle.request.mode == 3:
                 self._node.sdo[0x6060].raw = 6
