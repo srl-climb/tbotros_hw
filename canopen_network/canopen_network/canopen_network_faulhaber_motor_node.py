@@ -7,7 +7,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from custom_msgs.msg import Statusword, MotorPosition, CanError, DigitalInputs
 from custom_actions.action import MoveMotor
 from std_srvs.srv import Trigger
-from std_msgs.msg import String, Int16, Float64
+from std_msgs.msg import String, Int16, Float64, Int8, Bool
 from canopen.pdo.base import Map
 from canopen.emcy import EmcyError
 from threading import Lock
@@ -33,10 +33,12 @@ class FaulhaberMotorNode(BaseNode):
         #create publishers/subscriber
         self._pub_statusword = self.create_publisher(Statusword, name + 'statusword', 1)
         self._pub_inputs = self.create_publisher(DigitalInputs, name + 'inputs', 1)
+        self._pub_mode = self.create_publisher(Int8, name + 'mode', 1)
         self._pub_state = self.create_publisher(String, name + 'state', 1)
         self._pub_position = self.create_publisher(MotorPosition, name + 'position', 1)
         self._pub_velocity = self.create_publisher(Float64, name + 'velocity', 1)
         self._pub_current = self.create_publisher(Int16, name + 'current', 1)
+        self._pub_running = self.create_publisher(Bool, name + 'running', 1)
         self._pub_canerror = self.create_publisher(CanError, name + 'can_error', 1)
         self.create_subscription(MotorPosition, name + 'target_position', self.target_position_callback, 100)
 
@@ -103,6 +105,7 @@ class FaulhaberMotorNode(BaseNode):
 
         # motor parameters
         self._state = ''
+        self._running = False
         self._statusword = Statusword()
         self._actual_position = 0
         self._target_position = 0
@@ -173,21 +176,8 @@ class FaulhaberMotorNode(BaseNode):
 
         # variable to enable/disable target position subscription
         self._target_position_sub_enabled = False
-        
+
         self.get_logger().info('Initialization completed')
-
-        # debug loop
-        #self.create_timer(1, self.debug_loop)
-
-    def debug_loop(self):
-        self.get_logger().info('target position: ' + str(self._node.sdo[0x607A].raw))
-        self.get_logger().info('target position interntal: ' + str(self._node.sdo[0x257A].raw))
-        self.get_logger().info('actual position: ' + str(self._node.sdo[0x6064].raw))
-        self.get_logger().info('actual position internal: ' + str(self._node.sdo[0x6063].raw))
-        self.get_logger().info('min limit position: ' + str(self._node.sdo[0x607D][0x1].raw))
-        self.get_logger().info('min limit position internal: ' + str(self._node.sdo[0x257D][0x1].raw))
-        self.get_logger().info('max limit position: ' + str(self._node.sdo[0x607D][0x2].raw))
-        self.get_logger().info('max limit position internal: ' + str(self._node.sdo[0x257D][0x2].raw))
 
     def load_configs(self):
 
@@ -246,6 +236,8 @@ class FaulhaberMotorNode(BaseNode):
         
         # statusword
         stwd = canmsg[0].bits
+        # mode
+        mode = canmsg[1].raw
         # inputs
         inputs = canmsg[2].bits
 
@@ -301,6 +293,17 @@ class FaulhaberMotorNode(BaseNode):
 
         self._pub_inputs.publish(msg)
 
+        # publish mode
+        msg = Int8()
+        msg.data = int(mode)
+
+        self._pub_mode.publish(msg)
+
+        # publish running
+        msg = Bool()
+        msg.data = bool(self._running)
+
+        self._pub_running.publish(msg)
 
     def position_tpdo_callback(self, canmsg:Map):
 
@@ -479,8 +482,10 @@ class FaulhaberMotorNode(BaseNode):
     def execute_move_callback(self, goal_handle: ServerGoalHandle):
         
         move_id = self.get_move_id()
+        self._running = True
         
         with self._lock:
+            
             self.get_logger().info('Move [%s]: Start' %move_id)
             
             # profile position move parameters
@@ -491,22 +496,27 @@ class FaulhaberMotorNode(BaseNode):
                 self._node.sdo[0x6081].raw = goal_handle.request.profile_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
                 self._node.sdo[0x6083].raw = goal_handle.request.profile_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
                 self._node.sdo[0x6084].raw = goal_handle.request.profile_deceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
-            # homing move parameters
+            # homing move with config parameters
             elif goal_handle.request.mode == 1: 
                 self._node.sdo[0x607C].raw = self._homing_offset * self._factor
                 self._node.sdo[0x6098].raw = self._homing_method
                 self._node.sdo[0x6060].raw = 6
             # cyclic synchronous positioning parameters
             elif goal_handle.request.mode == 2:
-                self._node.sdo[0x6060].raw = 8
                 self._node.sdo[0x607A].raw = self._node.sdo[0x6064].raw # set target position to actual position
                 self._node.sdo[0x6081].raw = self._csp_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
                 self._node.sdo[0x6083].raw = self._csp_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
                 self._node.sdo[0x6084].raw = self._csp_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
+                self._node.sdo[0x6060].raw = 8
             # homing move with initial position parameters
             elif goal_handle.request.mode == 3:
                 self._node.sdo[0x6060].raw = 6
                 self._node.sdo[0x607C].raw = self._initial_position * self._factor
+                self._node.sdo[0x6098].raw = 35
+            # homing move with offset
+            elif goal_handle.request.mode == 4:
+                self._node.sdo[0x6060].raw = 6
+                self._node.sdo[0x607C].raw = goal_handle.request.homing_offset * self._factor
                 self._node.sdo[0x6098].raw = 35
             
             # subscriber for receiving position commands
@@ -520,18 +530,22 @@ class FaulhaberMotorNode(BaseNode):
             # publish feedback
             feedback = MoveMotor.Feedback()
             rate     = self.create_rate(4, self.get_clock())
-            aborted  = False
-            canceled = False
-            done     = False
+            aborted        = False
+            canceled       = False
+            done           = False
+            quick_stopped  = False
             
-            while not aborted and not canceled and not done:   
+            while not aborted and not canceled and not done and not quick_stopped:   
                 rate.sleep()     
+
                 feedback.actual_position = self._actual_position
                 feedback.target_position = self._target_position
-                
-                aborted  = move_id != self._current_move_id # move was overwritten by new move      
-                canceled = goal_handle.is_cancel_requested  # move was canceled/stopped
-                done     = self._statusword.target_reached  # move reached target
+                goal_handle.publish_feedback(feedback)
+
+                aborted       = move_id != self._current_move_id   # move was overwritten by new move      
+                canceled      = goal_handle.is_cancel_requested    # move was canceled/stopped
+                quick_stopped = self._state == 'quick stop active' # move was quick stopped
+                done          = self._statusword.target_reached    # move reached target
 
             if goal_handle.request.mode == 2:
                 self._target_position_sub_enabled = False
@@ -539,12 +553,14 @@ class FaulhaberMotorNode(BaseNode):
             if canceled:
                 goal_handle.canceled()
                 self.get_logger().info('Move [%s]: Canceled' %move_id)
-            elif aborted:
+            elif aborted or quick_stopped:
                 goal_handle.abort()
                 self.get_logger().info('Move [%s]: Aborted' %move_id)
             else:
                 goal_handle.succeed()
                 self.get_logger().info('Move [%s]: Completed' %move_id)  
+
+        self._running = False
 
         return MoveMotor.Result()
 
