@@ -6,7 +6,7 @@ import asyncio
 import threading
 import queue
 from rclpy.node import Node
-from std_msgs.msg import Bool, Int8
+from std_msgs.msg import Bool, Int8, String
 from std_srvs.srv import Trigger
 from custom_actions.action import Empty
 from rclpy.executors import MultiThreadedExecutor
@@ -241,6 +241,7 @@ class WirelessServoNode(Node):
         self.servo.name = self.get_parameter('servo_name').get_parameter_value().string_value
 
         # publishers
+        self.servo_name_pub = self.create_publisher(String, self.get_name() + '/name', 1)
         self.servo_connected_pub = self.create_publisher(Bool, self.get_name() + '/connected', 1)
         self.servo_running_pub = self.create_publisher(Bool, self.get_name() + '/running', 1)
         self.servo_closed_pub = self.create_publisher(Int8, self.get_name() + '/closed', 1)
@@ -270,6 +271,10 @@ class WirelessServoNode(Node):
         self.servo_action_id = int(-1)
 
     def timer_callback(self):
+
+        msg = String()
+        msg.data = self.servo.name
+        self.servo_name_pub.publish(msg)
 
         msg = Bool()
         msg.data = self.servo.connected
