@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-        'wireless_servo = wireless_servo.wireless_servo_peripheral_node:main',
+        'wireless_servo = wireless_servo.wireless_servo_node:main',
         'wireless_servo_peripheral = wireless_servo.wireless_servo_peripheral_node:main',
         'wireless_servo_central = wireless_servo.wireless_servo_central_node:main'
         ],
