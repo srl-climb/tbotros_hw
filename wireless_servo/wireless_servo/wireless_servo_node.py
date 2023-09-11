@@ -82,6 +82,7 @@ class WirelessServo():
         self.mode = None
         self.limitswitch0 = False
         self.limitswitch1 = False
+        self.polarity = True
         self.running = False
         self.error = False
         self.closed = int(0)
@@ -108,8 +109,8 @@ class WirelessServo():
     def receive_callback(self, _, data: bytearray):
 
         self.mode = int(data[0])
-        self.limitswitch0 = bool(data[1])
-        self.limitswitch1 = bool(data[2])
+        self.limitswitch0 = bool(data[1]) ^ self.polarity
+        self.limitswitch1 = bool(data[2]) ^ self.polarity
         self.running = bool(data[4])
         self.error = int(data[5])
         self.closed = int(data[6])
@@ -140,7 +141,7 @@ class WirelessServo():
             return
 
         try:
-            self.device = await bleak.BleakScanner.find_device_by_name(self.name, timeout=1)
+            self.device = await bleak.BleakScanner.find_device_by_name(self.name, timeout=0.5)
 
             if self.device is not None:
                 self.client = bleak.BleakClient(self.device.address, disconnected_callback = self.disconnect_callback)
