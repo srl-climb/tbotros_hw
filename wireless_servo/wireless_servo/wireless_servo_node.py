@@ -137,9 +137,6 @@ class WirelessServo():
 
     async def discover(self):
 
-        if self.device:
-            return
-
         try:
             self.device = await bleak.BleakScanner.find_device_by_name(self.name, timeout=0.5)
 
@@ -155,9 +152,6 @@ class WirelessServo():
 
     async def connect(self):
 
-        if self.connected or not self.client:
-            return
-       
         try:
             await self.client.connect()
             self.connected = bool(self.client.is_connected)         
@@ -195,7 +189,7 @@ class WirelessServo():
                 # discover servo
                 if state == 0:
                     await self.discover()
-                    if self.client is None:
+                    if self.device is None:
                         state = 0
                     else: 
                         state = 1
