@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from rclpy.node import Node
+from rclpy_wrapper.node import Node2
 import canopen
 
-class BaseNode(Node):
+class BaseNode(Node2):
 
     def __init__(self, network: canopen.Network = None, name: str = '', namespace: str = '', params: dict = {}):
         

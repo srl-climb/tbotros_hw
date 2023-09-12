@@ -6,7 +6,7 @@ import cv2
 import yaml
 import numpy as np
 import quaternion as qu
-from rclpy.node import Node
+from rclpy_wrapper.node import Node2
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 from ament_index_python.packages import get_package_share_directory
@@ -18,7 +18,7 @@ from tf2_ros.transform_broadcaster import TransformBroadcaster
 from cv_bridge import CvBridge
 from cv2 import aruco
 
-class ArucoDetectorNode(Node):
+class ArucoDetectorNode(Node2):
 
     def __init__(self):
         

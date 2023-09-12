@@ -4,13 +4,13 @@ import serial
 import serial.tools.list_ports
 import rclpy
 
-from rclpy.node import Node
+from rclpy_wrapper.node import Node2
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from std_msgs.msg import String, Bool
 from custom_srvs.srv import SerialSend
 
 
-class SerialManagerNode(Node):
+class SerialManagerNode(Node2):
 
     def __init__(self):
         super().__init__('serial_manager')

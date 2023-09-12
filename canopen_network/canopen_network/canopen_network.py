@@ -5,13 +5,13 @@ import canopen
 import yaml
 import os
 from ament_index_python import get_package_share_directory
-from rclpy.node import Node
+from rclpy_wrapper.node import Node2
 from rclpy.logging import get_logger
 from rclpy.executors import MultiThreadedExecutor
 from .canopen_network_faulhaber_motor_node import FaulhaberMotorNode
 from .canopen_network_canopen_master_node import CanopenMasterNode
 
-def setup() -> list[Node]:
+def setup() -> list[Node2]:
     
     config_file = os.path.join(get_package_share_directory('tbotros_config'), 'config/can.yaml')
 

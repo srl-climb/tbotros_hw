@@ -5,12 +5,12 @@ import bleak
 import asyncio
 import threading
 import queue
-from rclpy.node import Node
+from rclpy_wrapper.node import Node2
 from std_msgs.msg import Bool, Int8, String
 from std_srvs.srv import Trigger
 from custom_actions.action import Empty
 from rclpy.executors import MultiThreadedExecutor
-from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.action import CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from typing import Any
 
@@ -222,7 +222,7 @@ class WirelessServo():
         self.thread.join(10)
 
 
-class WirelessServoNode(Node):
+class WirelessServoNode(Node2):
 
     def __init__(self, servo: WirelessServo):
 
@@ -255,14 +255,14 @@ class WirelessServoNode(Node):
         self.timeout = 3
 
         # actions
-        ActionServer(self, Empty, self.get_name() + '/open', 
-                     execute_callback=self.execute_servo_open_action_callback, 
-                     goal_callback=self.goal_servo_action_callback,
-                     cancel_callback=self.cancel_servo_action_callback)
-        ActionServer(self, Empty, self.get_name() + '/close', 
-                     execute_callback=self.execute_servo_close_action_callback, 
-                     goal_callback=self.goal_servo_action_callback,
-                     cancel_callback=self.cancel_servo_action_callback)
+        self.create_action_server(Empty, self.get_name() + '/open', 
+                                  execute_callback=self.execute_servo_open_action_callback, 
+                                  goal_callback=self.goal_servo_action_callback,
+                                  cancel_callback=self.cancel_servo_action_callback)
+        self.create_action_server(Empty, self.get_name() + '/close', 
+                                  execute_callback=self.execute_servo_close_action_callback, 
+                                  goal_callback=self.goal_servo_action_callback,
+                                  cancel_callback=self.cancel_servo_action_callback)
         self.servo_action_id = int(-1)
 
     def timer_callback(self):

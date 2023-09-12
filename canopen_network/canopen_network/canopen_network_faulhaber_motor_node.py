@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import yaml
-from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.action import CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from custom_msgs.msg import Statusword, MotorPosition, CanError, DigitalInputs
@@ -53,11 +53,11 @@ class FaulhaberMotorNode(BaseNode):
         self.create_service(Trigger, name + 'save_home', self.save_home_callback)
 
         # create action for moving the motor
-        ActionServer(self, MoveMotor, name + 'move', 
-                     callback_group = ReentrantCallbackGroup(),
-                     execute_callback = self.execute_move_callback,
-                     goal_callback = self.goal_move_callback,
-                     cancel_callback = self.cancel_move_callback)
+        self.create_action_server(MoveMotor, name + 'move', 
+                                  callback_group = ReentrantCallbackGroup(),
+                                  execute_callback = self.execute_move_callback,
+                                  goal_callback = self.goal_move_callback,
+                                  cancel_callback = self.cancel_move_callback)
 
         # lock for protecting execute_move_callback
         self._lock = Lock()
