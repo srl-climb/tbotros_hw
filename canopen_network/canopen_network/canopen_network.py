@@ -58,10 +58,10 @@ def main(args = None):
             executor.add_node(node)
         try:
             executor.spin()
-        finally:
-            executor.shutdown()         
+        finally:   
             for node in nodes:
                 node.destroy_node()
+            executor.shutdown()
     except KeyboardInterrupt:
         pass
     finally:

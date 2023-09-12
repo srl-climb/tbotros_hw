@@ -158,7 +158,7 @@ class FaulhaberMotorNode(BaseNode):
 
         # set state to pre-operational to save pdos
         self._node.nmt.state = 'PRE-OPERATIONAL'
-
+        
         # save pdo configuration
         self._node.tpdo.save()
         self._node.rpdo.save()

@@ -317,7 +317,7 @@ class WirelessServoNode(Node2):
     
     def cancel_servo_action_callback(self, _):
 
-        self.send('open')
+        self.send('stop')
 
         return CancelResponse.ACCEPT
     
