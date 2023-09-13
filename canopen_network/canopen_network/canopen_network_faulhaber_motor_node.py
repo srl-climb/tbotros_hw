@@ -40,7 +40,7 @@ class FaulhaberMotorNode(BaseNode):
         self._pub_current = self.create_publisher(Int16, name + 'current', 1)
         self._pub_running = self.create_publisher(Bool, name + 'running', 1)
         self._pub_canerror = self.create_publisher(CanError, name + 'can_error', 1)
-        self.create_subscription(MotorPosition, name + 'target_position', self.target_position_callback, 100)
+        self.create_subscription(Float64, name + 'csp_target_position', self.csp_target_position_callback, 100)
 
         # create services for controlling the motor's state machine
         self.create_service(Trigger, name + 'shut_down', self.shut_down_callback)
@@ -168,14 +168,14 @@ class FaulhaberMotorNode(BaseNode):
 
         ### ADDITIONAL STUFF ###
 
-        # variable used by target_position_callback to identify missing messages
+        # variable used by csp_target_position_callback to identify missing messages
         self._last_message_id = 0
 
         # variable used by execute_move_callback to determine if a new move was started
         self._current_move_id = int(-1)
 
         # variable to enable/disable target position subscription
-        self._target_position_sub_enabled = False
+        self._csp_target_position_sub_enabled = False
 
         self.get_logger().info('Initialization completed')
 
@@ -323,7 +323,7 @@ class FaulhaberMotorNode(BaseNode):
         # velocity message
         msg = Float64()
         msg.data = float(canmsg[0].raw / self._gearratio / (1/self._feed) / self._factor / 60)
-
+        
         self._pub_velocity.publish(msg)
 
         # current message
@@ -521,7 +521,7 @@ class FaulhaberMotorNode(BaseNode):
             
             # subscriber for receiving position commands
             if goal_handle.request.mode == 2:
-                self._target_position_sub_enabled = True
+                self._csp_target_position_sub_enabled = True
 
             # start move
             self._node.sdo[0x6040].bits[4] = 0 # start
@@ -548,7 +548,7 @@ class FaulhaberMotorNode(BaseNode):
                 done          = self._statusword.target_reached    # move reached target
 
             if goal_handle.request.mode == 2:
-                self._target_position_sub_enabled = False
+                self._csp_target_position_sub_enabled = False
 
             if canceled:
                 goal_handle.canceled()
@@ -576,10 +576,11 @@ class FaulhaberMotorNode(BaseNode):
 
         return GoalResponse.ACCEPT
 
-    def target_position_callback(self, msg: MotorPosition): 
+    def csp_target_position_callback(self, msg: Float64): 
         
-        if self._target_position_sub_enabled:
-            self._node.rpdo[2][0].raw = msg.target_position * self._factor
+        if self._csp_target_position_sub_enabled:
+            self.get_logger().info('receiving data')
+            self._node.rpdo[2][0].raw = msg.data * self._factor
             self._node.rpdo[2].transmit()
 
     def get_move_id(self) -> int:
