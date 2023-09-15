@@ -135,23 +135,23 @@ class FaulhaberMotorNode(BaseNode):
         self._node.tpdo[1].event_timer = 1000
         self._node.tpdo[1].enabled = True
         self._node.tpdo[1].add_callback(self.statusword_tpdo_callback)
-        # tdpo[2]: target position/position actual value, send after every sync msg
+        # tdpo[2]: target position/position actual value, send after every nth sync msg
         self._node.tpdo[2].clear()
         self._node.tpdo[2].add_variable(0x607A) # target position
         self._node.tpdo[2].add_variable(0x6064) # position actual value
-        self._node.tpdo[2].trans_type = 5
+        self._node.tpdo[2].trans_type = 1 # e.g. 5 -> every 5th, note: 255 is different transmission mode, see documentation for details
         self._node.tpdo[2].enabled = True
         self._node.tpdo[2].add_callback(self.position_tpdo_callback)
-        # rpdo[2]: target position, send after every sync msg
+        # rpdo[2]: target position, send after every nth sync msg
         self._node.rpdo[2].clear()
         self._node.rpdo[2].add_variable(0x607A) # target position
         self._node.rpdo[2].trans_type = 1
         self._node.rpdo[2].enabled = True
-        # tpdo[3]: velocity/current actual value, send after every sync msg
+        # tpdo[3]: velocity/current actual value, send after every nth sync msg
         self._node.tpdo[3].clear()
         self._node.tpdo[3].add_variable(0x606C) # velocity actual value
         self._node.tpdo[3].add_variable(0x6078) # current actual value
-        self._node.tpdo[3].trans_type = 5
+        self._node.tpdo[3].trans_type = 1
         self._node.tpdo[3].enabled = True
         self._node.tpdo[3].add_callback(self.velocity_tpdo_callback)
         # Note: pdo max size is 64bit: position, velocity, current values do not fit into one pdo
