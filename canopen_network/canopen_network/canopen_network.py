@@ -59,14 +59,14 @@ def main(args = None):
         try:
             executor.spin()
         finally:   
-            for node in nodes:
-                node.destroy_node()
             executor.shutdown()
+            for node in nodes:
+                node.destroy_node()    
     except KeyboardInterrupt:
         pass
     finally:
         rclpy.shutdown()
-
+        
 if __name__ == '__main__':
 
     main()

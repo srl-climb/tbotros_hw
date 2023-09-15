@@ -45,16 +45,16 @@ class SendFeedback():
 
 class SendQueue(queue.Queue):
 
-    def __init__(self):
+    def __init__(self, size: int = 10):
 
-        super().__init__(1)
+        super().__init__(size)
 
         self.lock = threading.Lock()
 
     def enqueue(self, item) -> tuple[bool, SendFeedback]:
         
         with self.lock:
-            if self.empty():
+            if not self.full():
                 feedback = SendFeedback()
                 self.put((item, feedback))
                 return False, feedback
@@ -64,11 +64,26 @@ class SendQueue(queue.Queue):
     def dequeue(self) -> tuple[Any, SendFeedback, bool]:
 
         with self.lock:
-            if self.qsize() > 0:
+            if not self.empty():
                 item, message = self.get()
                 return item, message, False
             else:
                 return None, None, True
+
+    def enqueue_at_front(self, item) -> tuple[bool, SendFeedback]:
+
+        with self.lock:
+            if self.qsize() < self.maxsize:
+                elements = []
+                while not self.empty():
+                    elements.append(self.get())
+                feedback = SendFeedback()
+                elements.insert((item, feedback))
+                for element in elements:
+                    self.put(element)
+                return False, feedback
+            else:
+                return True, None
 
 
 class WirelessServo():
@@ -165,6 +180,7 @@ class WirelessServo():
                     elif characteristic.uuid == "7def8317-7302-4ee6-8849-46face74ca2a":
                         self.txcharacteristic = characteristic
                 await self.client.start_notify(self.rxcharacteristic, self.receive_callback)
+                self.send_queue.enqueue_at_front('clear')
                 self.get_logger().info(f"Connected to {self.name}")
             else:
                 self.get_logger().warn(f"Failed to connect to {self.name}")
@@ -372,7 +388,6 @@ class WirelessServoNode(Node2):
                         self.get_logger().info(f'Open/close servo [{servo_action_id}]: Succeeded')
                         goal_handle.succeed()
                         break
-                print(state)
                 if self.time_in_seconds() - start_time > self.timeout:
                     self.get_logger().error(f'Open/close servo [{servo_action_id}]: Aborted, timed out')
                     goal_handle.abort() 

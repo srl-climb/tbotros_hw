@@ -579,7 +579,6 @@ class FaulhaberMotorNode(BaseNode):
     def csp_target_position_callback(self, msg: Float64): 
         
         if self._csp_target_position_sub_enabled:
-            self.get_logger().info('receiving data')
             self._node.rpdo[2][0].raw = msg.data * self._factor
             self._node.rpdo[2].transmit()
 
