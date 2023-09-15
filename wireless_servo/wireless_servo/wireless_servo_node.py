@@ -65,8 +65,8 @@ class SendQueue(queue.Queue):
 
         with self.lock:
             if not self.empty():
-                item, message = self.get()
-                return item, message, False
+                item, feedback = self.get()
+                return item, feedback, False
             else:
                 return None, None, True
 
@@ -78,12 +78,19 @@ class SendQueue(queue.Queue):
                 while not self.empty():
                     elements.append(self.get())
                 feedback = SendFeedback()
-                elements.insert((item, feedback))
+                elements.insert(0, (item, feedback))
                 for element in elements:
                     self.put(element)
                 return False, feedback
             else:
                 return True, None
+            
+    def flush(self) -> None:
+
+        with self.lock:
+            while not self.empty():
+                feedback: SendFeedback = self.get()[1]
+                feedback.failed('Flushed from queue')
 
 
 class WirelessServo():
@@ -180,6 +187,8 @@ class WirelessServo():
                     elif characteristic.uuid == "7def8317-7302-4ee6-8849-46face74ca2a":
                         self.txcharacteristic = characteristic
                 await self.client.start_notify(self.rxcharacteristic, self.receive_callback)
+                # remove any stale items from the send queue
+                self.send_queue.flush()
                 self.send_queue.enqueue_at_front('clear')
                 self.get_logger().info(f"Connected to {self.name}")
             else:
