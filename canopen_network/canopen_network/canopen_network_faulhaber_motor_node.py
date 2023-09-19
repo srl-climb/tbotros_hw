@@ -4,10 +4,10 @@ import yaml
 from rclpy.action import CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
-from custom_msgs.msg import Statusword, MotorPosition, CanError, DigitalInputs
+from custom_msgs.msg import Statusword, CanError, DigitalInputs, Float64Stamped, Int16Stamped
 from custom_actions.action import MoveMotor
 from std_srvs.srv import Trigger
-from std_msgs.msg import String, Int16, Float64, Int8, Bool
+from std_msgs.msg import String, Int8, Bool
 from canopen.pdo.base import Map
 from canopen.emcy import EmcyError
 from threading import Lock
@@ -35,12 +35,13 @@ class FaulhaberMotorNode(BaseNode):
         self._pub_inputs = self.create_publisher(DigitalInputs, name + 'inputs', 1)
         self._pub_mode = self.create_publisher(Int8, name + 'mode', 1)
         self._pub_state = self.create_publisher(String, name + 'state', 1)
-        self._pub_position = self.create_publisher(MotorPosition, name + 'position', 1)
-        self._pub_velocity = self.create_publisher(Float64, name + 'velocity', 1)
-        self._pub_current = self.create_publisher(Int16, name + 'current', 1)
+        self._pub_position = self.create_publisher(Float64Stamped, name + 'position', 1)
+        self._pub_target_position = self.create_publisher(Float64Stamped, name + 'target_position', 1)
+        self._pub_velocity = self.create_publisher(Float64Stamped, name + 'velocity', 1)
+        self._pub_current = self.create_publisher(Int16Stamped, name + 'current', 1)
         self._pub_running = self.create_publisher(Bool, name + 'running', 1)
         self._pub_canerror = self.create_publisher(CanError, name + 'can_error', 1)
-        self.create_subscription(Float64, name + 'csp_target_position', self.csp_target_position_callback, 1)
+        self.create_subscription(Float64Stamped, name + 'csp_target_position', self.csp_target_position_callback, 1)
 
         # create services for controlling the motor's state machine
         self.create_service(Trigger, name + 'shut_down', self.shut_down_callback)
@@ -312,22 +313,27 @@ class FaulhaberMotorNode(BaseNode):
         self._actual_position = float(canmsg[1].raw / self._factor)
         
         # position message
-        msg = MotorPosition()
-        msg.target_position = self._target_position
-        msg.actual_position = self._actual_position 
+        msg = Float64Stamped()
+        msg.stamp = self.get_clock().now().to_msg()
+        
+        msg.data = self._target_position
+        self._pub_target_position.publish(msg)
 
+        msg.data = self._actual_position
         self._pub_position.publish(msg)
 
     def velocity_tpdo_callback(self, canmsg:Map):
 
         # velocity message
-        msg = Float64()
+        msg = Float64Stamped()
+        msg.stamp = self.get_clock().now().to_msg()
         msg.data = float(canmsg[0].raw / self._gearratio / (1/self._feed) / self._factor / 60)
         
         self._pub_velocity.publish(msg)
 
         # current message
-        msg = Int16()
+        msg = Int16Stamped()
+        msg.stamp = self.get_clock().now().to_msg()
         msg.data  = canmsg[1].raw
 
         self._pub_current.publish(msg)
@@ -576,7 +582,7 @@ class FaulhaberMotorNode(BaseNode):
 
         return GoalResponse.ACCEPT
 
-    def csp_target_position_callback(self, msg: Float64): 
+    def csp_target_position_callback(self, msg: Float64Stamped): 
         
         if self._csp_target_position_sub_enabled:
             self._node.rpdo[2][0].raw = msg.data * self._factor
