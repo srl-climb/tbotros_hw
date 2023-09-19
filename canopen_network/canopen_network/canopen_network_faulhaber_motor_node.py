@@ -40,7 +40,7 @@ class FaulhaberMotorNode(BaseNode):
         self._pub_current = self.create_publisher(Int16, name + 'current', 1)
         self._pub_running = self.create_publisher(Bool, name + 'running', 1)
         self._pub_canerror = self.create_publisher(CanError, name + 'can_error', 1)
-        self.create_subscription(Float64, name + 'csp_target_position', self.csp_target_position_callback, 100)
+        self.create_subscription(Float64, name + 'csp_target_position', self.csp_target_position_callback, 1)
 
         # create services for controlling the motor's state machine
         self.create_service(Trigger, name + 'shut_down', self.shut_down_callback)
