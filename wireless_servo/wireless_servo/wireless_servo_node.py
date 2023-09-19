@@ -167,7 +167,7 @@ class WirelessServo():
                 self.get_logger().info(f"Discovered {self.name}")
 
             else:
-                self.get_logger().warn(f"Failed to discover {self.name}")
+                self.get_logger().warn(f"Failed to discover {self.name}", throttle_duration_sec=10)
 
         except Exception as exc:
             self.get_logger().error(f"Failed to discover {self.name}: {exc}")
