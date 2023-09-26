@@ -90,9 +90,9 @@ class FaulhaberMotorNode(BaseNode):
         # create motor can node
         self._can_id = self._config.get('can_id', 0)
         self._node = self._network.add_node(self._can_id, self._eds_file, upload_eds = False)
-        #self._node.sdo.MAX_RETRIES = 2
+        self._node.sdo.MAX_RETRIES = 2
         #self._node.sdo.PAUSE_BEFORE_SEND = 0.001
-        #self._node.sdo.RESPONSE_TIMEOUT = 1
+        self._node.sdo.RESPONSE_TIMEOUT = 1
 
         # can bus error handling
         self._node.emcy.add_callback(self.can_error_callback)
@@ -146,13 +146,13 @@ class FaulhaberMotorNode(BaseNode):
         # rpdo[2]: target position, send after every nth sync msg
         self._node.rpdo[2].clear()
         self._node.rpdo[2].add_variable(0x607A) # target position
-        self._node.rpdo[2].trans_type = 1
+        self._node.rpdo[2].trans_type = 5
         self._node.rpdo[2].enabled = True
         # tpdo[3]: velocity/current actual value, send after every nth sync msg
         self._node.tpdo[3].clear()
         self._node.tpdo[3].add_variable(0x606C) # velocity actual value
         self._node.tpdo[3].add_variable(0x6078) # current actual value
-        self._node.tpdo[3].trans_type = 1
+        self._node.tpdo[3].trans_type = 5
         self._node.tpdo[3].enabled = True
         self._node.tpdo[3].add_callback(self.velocity_tpdo_callback)
         # Note: pdo max size is 64bit: position, velocity, current values do not fit into one pdo
@@ -510,7 +510,7 @@ class FaulhaberMotorNode(BaseNode):
             # cyclic synchronous positioning parameters
             elif goal_handle.request.mode == 2:
                 self._node.sdo[0x607A].raw = self._node.sdo[0x6064].raw # set target position to actual position
-                self._node.sdo[0x6081].raw = self._csp_velocity * self._gearratio * (1/self._feed) * self._factor * 60 # 0x6081 is in 1/min
+                self._node.sdo[0x6081].raw = self._csp_velocity * self._gearratio * (1/self._feed) * self._factor * 60*0 # 0x6081 is in 1/min
                 self._node.sdo[0x6083].raw = self._csp_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
                 self._node.sdo[0x6084].raw = self._csp_acceleration * self._gearratio * (1/self._feed) * self._factor  # 0x6081 is in 1/s^2
                 self._node.sdo[0x6060].raw = 8

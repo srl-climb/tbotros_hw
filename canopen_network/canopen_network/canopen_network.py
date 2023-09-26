@@ -39,13 +39,12 @@ def setup() -> list[Node2]:
                                      name = node_config['name'], 
                                      params = node_config['params'])
             nodes.append(node)
-        elif node_config['type'] == 'faulhaber_motor': #and node_config['namespace'] =='motor10':
+        elif node_config['type'] == 'faulhaber_motor': # and node_config['namespace'] =='motor10':
             node = FaulhaberMotorNode(network = network, 
                                       namespace = node_config['namespace'], 
                                       name = node_config['name'], 
                                       params = node_config['params'])
             nodes.append(node)
-
     return nodes
 
 def main(args = None):
@@ -59,9 +58,13 @@ def main(args = None):
         try:
             executor.spin()
         finally:   
+            for node in nodes:
+                executor.remove_node(node)
             executor.shutdown()
             for node in nodes:
-                node.destroy_node()    
+                node.destroy_node()  
+
+            print('c')
     except KeyboardInterrupt:
         pass
     finally:
